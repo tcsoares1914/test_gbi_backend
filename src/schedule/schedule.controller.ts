@@ -1,34 +1,76 @@
-import { Controller, Get, Post, Body, Patch, Param, Delete } from '@nestjs/common';
+import {
+  Controller,
+  Get,
+  Post,
+  Put,
+  Delete,
+  Body,
+  Param,
+} from '@nestjs/common';
 import { ScheduleService } from './schedule.service';
-import { CreateScheduleDto } from './dto/create-schedule.dto';
-import { UpdateScheduleDto } from './dto/update-schedule.dto';
 
 @Controller('schedule')
 export class ScheduleController {
+  /**
+   * Create constructior instances.
+   */
   constructor(private readonly scheduleService: ScheduleService) {}
 
+  /**
+   * Create a new item.
+   */
   @Post()
-  create(@Body() createScheduleDto: CreateScheduleDto) {
-    return this.scheduleService.create(createScheduleDto);
+  async create(
+    @Body()
+    scheduleInput: {
+      type: string;
+      vehicle: string;
+      confirmation: boolean;
+    },
+  ) {
+    return await this.scheduleService.createSchedule(scheduleInput);
   }
 
+  /**
+   * Find all items.
+   */
   @Get()
-  findAll() {
-    return this.scheduleService.findAll();
+  async findAll() {
+    return await this.scheduleService.findAll();
   }
 
+  /**
+   * Find one item.
+   */
   @Get(':id')
-  findOne(@Param('id') id: string) {
-    return this.scheduleService.findOne(+id);
+  async find(@Param('id') id: string) {
+    return await this.scheduleService.findSchedule({ id: id });
   }
 
-  @Patch(':id')
-  update(@Param('id') id: string, @Body() updateScheduleDto: UpdateScheduleDto) {
-    return this.scheduleService.update(+id, updateScheduleDto);
+  /**
+   * Update one item.
+   */
+  @Put(':id')
+  async updateUser(
+    @Param('id') id: string,
+    @Body()
+    scheduleInput: {
+      type: string;
+      vehicle: string;
+      confirmation: boolean;
+    },
+  ) {
+    return await this.scheduleService.updateSchedule({
+      where: { id: id },
+      data: scheduleInput,
+    });
   }
 
+  /**
+   * Delete one item.
+   */
   @Delete(':id')
-  remove(@Param('id') id: string) {
-    return this.scheduleService.remove(+id);
+  async deleteUser(@Param('id') id: string) {
+    return await this.scheduleService.deleteSchedule({ id: id });
   }
 }

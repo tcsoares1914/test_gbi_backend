@@ -15,14 +15,9 @@ datasource db {
 
 model Schedule {
   id String @default(uuid()) @id
-  type WashType @default(SIMPLE)
+  type String
   vehicle String
   confirmation Boolean @default(false)
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
-}
-
-enum WashType {
-  SIMPLE
-  COMPLETE
 }
