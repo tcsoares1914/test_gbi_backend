@@ -1,8 +1,9 @@
 -- CreateTable
-CREATE TABLE `Schedule` (
+CREATE TABLE `Schedules` (
     `id` VARCHAR(191) NOT NULL,
-    `type` ENUM('SIMPLE', 'COMPLETE') NOT NULL DEFAULT 'SIMPLE',
+    `type` VARCHAR(191) NOT NULL,
     `vehicle` VARCHAR(191) NOT NULL,
+    `slot` DATETIME(3) NULL,
     `confirmation` BOOLEAN NOT NULL DEFAULT false,
     `createdAt` DATETIME(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3),
     `updatedAt` DATETIME(3) NOT NULL,

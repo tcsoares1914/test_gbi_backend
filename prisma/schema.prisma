@@ -13,10 +13,11 @@ datasource db {
   url = env("DATABASE_URL")
 }
 
-model Schedule {
+model Schedules {
   id String @default(uuid()) @id
   type String
   vehicle String
+  slot DateTime?
   confirmation Boolean @default(false)
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt

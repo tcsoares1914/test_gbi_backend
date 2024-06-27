@@ -25,6 +25,7 @@ export class ScheduleController {
     scheduleInput: {
       type: string;
       vehicle: string;
+      slot: string;
       confirmation: boolean;
     },
   ) {
