@@ -29,35 +29,34 @@ export class ScheduleService {
     try {
       const washingQuantitySlots = this.checkSlotsByWashingType(data.type);
       const dateSlot = new Date(data.slot);
+      const checkPlate = await this.checkVehiclePlate(data.vehicle);
+
+      if (checkPlate === false) {
+        throw new BadRequestException('A placa não está no padrão Mercosul!');
+      }
+
       const canSchedule = await this.checkSlotAvailability(
         dateSlot,
         washingQuantitySlots,
       );
 
       if (canSchedule === false) {
-        throw new BadRequestException();
+        throw new BadRequestException(
+          'Ja existe uma lavagem agendada ou em andamento neste horário!',
+        );
       }
 
-      data.slot = dateSlot;
-      const temporarySlots = this.getAvailableScheduleSlotsByTypeQuantity(
-        dateSlot,
-        washingQuantitySlots,
-      );
-
-      const blockedSlots = [];
-      temporarySlots.map(async (slot, key) => {
-        data.slot = new Date(slot.date).toISOString();
-        blockedSlots[key] = await this.prisma.schedules.create({
-          data,
-        });
+      data.slot = new Date(dateSlot).toISOString();
+      const schedule = await this.prisma.schedules.create({
+        data,
       });
 
-      return blockedSlots;
+      return schedule;
     } catch (error) {
       throw new HttpException(
         {
           status: HttpStatus.UNPROCESSABLE_ENTITY,
-          error: 'The date slot is busy for scheduling!',
+          error: error.response.message,
         },
         HttpStatus.UNPROCESSABLE_ENTITY,
         {
@@ -137,38 +136,72 @@ export class ScheduleService {
   }
 
   /**
+   * Check vehicle plate.
+   */
+  protected async checkVehiclePlate(plate: string) {
+    const regex = /^[a-zA-Z]{3}[a-zA-Z0-9]{4}$/;
+
+    return regex.test(plate);
+  }
+
+  /**
    * Check if date slot is available for schedule.
    */
   protected async checkSlotAvailability(
     slot: Date,
     slotQuantity: number,
   ): Promise<boolean> {
-    let slotDateFinish;
+    try {
+      let slotDateFinish;
 
-    const slotDateStart = moment(slot).format('YYYY-MM-DD HH:mm:ss');
+      if (slot.getDay() == 6 || slot.getDay() == 0) {
+        return false;
+      }
 
-    if (slotQuantity === 2) {
-      slotDateFinish = moment(slotDateStart)
-        .add(30, 'minute')
-        .format('YYYY-MM-DD HH:mm:ss');
+      if (
+        (slot.getHours() > 12 && slot.getHours() < 13) ||
+        (slot.getHours() < 10 && slot.getHours() > 18)
+      ) {
+        return false;
+      }
+
+      const slotDateStart = moment(slot).format('YYYY-MM-DD HH:mm:ss');
+
+      if (slotQuantity === 2) {
+        slotDateFinish = moment(slotDateStart)
+          .add(30, 'minute')
+          .format('YYYY-MM-DD HH:mm:ss');
+      }
+
+      if (slotQuantity === 3) {
+        slotDateFinish = moment(slotDateStart)
+          .add(45, 'minute')
+          .format('YYYY-MM-DD HH:mm:ss');
+      }
+
+      const checkAvailability = await this.findSchedulesBetweenDates(
+        slotDateStart,
+        slotDateFinish,
+      );
+
+      if (checkAvailability.length > 0) {
+        return false;
+      }
+
+      return true;
+    } catch (error) {
+      throw new HttpException(
+        {
+          status: HttpStatus.UNPROCESSABLE_ENTITY,
+          error:
+            'O horário informado esta ocupado ou fora do horário de atendimento!',
+        },
+        HttpStatus.UNPROCESSABLE_ENTITY,
+        {
+          cause: error,
+        },
+      );
     }
-
-    if (slotQuantity === 3) {
-      slotDateFinish = moment(slotDateStart)
-        .add(45, 'minute')
-        .format('YYYY-MM-DD HH:mm:ss');
-    }
-
-    const checkAvailability = await this.findSchedulesBetweenDates(
-      slotDateStart,
-      slotDateFinish,
-    );
-
-    if (checkAvailability.length > 0) {
-      return false;
-    }
-
-    return true;
   }
 
   /**
