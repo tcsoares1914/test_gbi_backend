@@ -30,14 +30,12 @@ export class ScheduleService {
       const washingQuantitySlots = this.checkSlotsByWashingType(data.type);
       const dateSlot = new Date(data.slot);
       const checkPlate = await this.checkVehiclePlate(data.vehicle);
-      console.log('checkPlate: ' + checkPlate);
 
       if (checkPlate === false) {
         throw new BadRequestException('A placa não está no padrão Mercosul!');
       }
 
       const checkDay = await this.checkAvailableDays(dateSlot);
-      console.log('checkDay: ' + checkDay);
 
       if (checkDay === false) {
         throw new BadRequestException(
@@ -46,7 +44,6 @@ export class ScheduleService {
       }
 
       const checkAvailableHours = await this.checkAvailableHours(dateSlot);
-      console.log('checkAvailableHours: ' + checkAvailableHours);
 
       if (checkAvailableHours === false) {
         throw new BadRequestException(
@@ -182,12 +179,6 @@ export class ScheduleService {
     if (hour < 10 || hour > 18 || (hour > 12 && hour < 13)) {
       return false;
     }
-
-    console.log('HOUR: ' + hour);
-    console.log(hour < 10);
-    console.log(hour > 18);
-    console.log(hour > 12 && hour < 13);
-    console.log(hour < 10 || hour > 18 || (hour > 12 && hour < 13));
 
     return true;
   }
