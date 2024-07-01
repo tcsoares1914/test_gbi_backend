@@ -30,9 +30,28 @@ export class ScheduleService {
       const washingQuantitySlots = this.checkSlotsByWashingType(data.type);
       const dateSlot = new Date(data.slot);
       const checkPlate = await this.checkVehiclePlate(data.vehicle);
+      console.log('checkPlate: ' + checkPlate);
 
       if (checkPlate === false) {
         throw new BadRequestException('A placa não está no padrão Mercosul!');
+      }
+
+      const checkDay = await this.checkAvailableDays(dateSlot);
+      console.log('checkDay: ' + checkDay);
+
+      if (checkDay === false) {
+        throw new BadRequestException(
+          'Não é possivel aguendar aos finais de semana!',
+        );
+      }
+
+      const checkAvailableHours = await this.checkAvailableHours(dateSlot);
+      console.log('checkAvailableHours: ' + checkAvailableHours);
+
+      if (checkAvailableHours === false) {
+        throw new BadRequestException(
+          'Não é possivel agendar fora do horário de atendimento (10 as 12 - 13 as 18)!',
+        );
       }
 
       const canSchedule = await this.checkSlotAvailability(
@@ -145,63 +164,67 @@ export class ScheduleService {
   }
 
   /**
+   * Check selected day if not into a weekend.
+   */
+  protected async checkAvailableDays(slot: Date): Promise<boolean> {
+    if (slot.getDay() == 6 || slot.getDay() == 0) {
+      return false;
+    }
+
+    return true;
+  }
+
+  /**
+   * Check selected day if not into a weekend.
+   */
+  protected async checkAvailableHours(slot: Date): Promise<boolean> {
+    const hour = slot.getHours();
+    if (hour < 10 || hour > 18 || (hour > 12 && hour < 13)) {
+      return false;
+    }
+
+    console.log('HOUR: ' + hour);
+    console.log(hour < 10);
+    console.log(hour > 18);
+    console.log(hour > 12 && hour < 13);
+    console.log(hour < 10 || hour > 18 || (hour > 12 && hour < 13));
+
+    return true;
+  }
+
+  /**
    * Check if date slot is available for schedule.
    */
   protected async checkSlotAvailability(
     slot: Date,
     slotQuantity: number,
   ): Promise<boolean> {
-    try {
-      let slotDateFinish;
+    let slotDateFinish;
 
-      if (slot.getDay() == 6 || slot.getDay() == 0) {
-        return false;
-      }
+    const slotDateStart = moment(slot).format('YYYY-MM-DD HH:mm:ss');
 
-      if (
-        (slot.getHours() > 12 && slot.getHours() < 13) ||
-        (slot.getHours() < 10 && slot.getHours() > 18)
-      ) {
-        return false;
-      }
-
-      const slotDateStart = moment(slot).format('YYYY-MM-DD HH:mm:ss');
-
-      if (slotQuantity === 2) {
-        slotDateFinish = moment(slotDateStart)
-          .add(30, 'minute')
-          .format('YYYY-MM-DD HH:mm:ss');
-      }
-
-      if (slotQuantity === 3) {
-        slotDateFinish = moment(slotDateStart)
-          .add(45, 'minute')
-          .format('YYYY-MM-DD HH:mm:ss');
-      }
-
-      const checkAvailability = await this.findSchedulesBetweenDates(
-        slotDateStart,
-        slotDateFinish,
-      );
-
-      if (checkAvailability.length > 0) {
-        return false;
-      }
-
-      return true;
-    } catch (error) {
-      throw new HttpException(
-        {
-          status: HttpStatus.UNPROCESSABLE_ENTITY,
-          error:
-            'O horário informado esta ocupado ou fora do horário de atendimento!',
-        },
-        HttpStatus.UNPROCESSABLE_ENTITY,
-        {
-          cause: error,
-        },
-      );
+    if (slotQuantity === 2) {
+      slotDateFinish = moment(slotDateStart)
+        .add(30, 'minute')
+        .format('YYYY-MM-DD HH:mm:ss');
     }
+
+    if (slotQuantity === 3) {
+      slotDateFinish = moment(slotDateStart)
+        .add(45, 'minute')
+        .format('YYYY-MM-DD HH:mm:ss');
+    }
+
+    const checkAvailability = await this.findSchedulesBetweenDates(
+      slotDateStart,
+      slotDateFinish,
+    );
+
+    if (checkAvailability.length > 0) {
+      return false;
+    }
+
+    return true;
   }
 
   /**
